@@ -111,27 +111,24 @@ class DiffableTableViewController: UITableViewController {
         snapshot.appendSections([.yourself, .family, .closeFriends, .friends])
         
         snapshot.appendItems(
-            [.init(name: "George"),
+            [.init(name: "georrgee"),
         ], toSection: .yourself)
 
         snapshot.appendItems(
-            [.init(name: "Mom"),
-             .init(name: "Dad"),
-             .init(name: "Lil Bro")
+            [.init(name: "shane.s.gats"),
+             .init(name: "bella"),
+             .init(name: "deez clowns 🤡 IG")
         ], toSection: .family)
         
         snapshot.appendItems(
-            [.init(name: "Kevin"),
-             .init(name: "Checko"),
-             .init(name: "Rey"),
-             .init(name: "Stephen")
+            [.init(name: "kevvdogg"),
+             .init(name: "Checko")
         ], toSection: .closeFriends)
         
         snapshot.appendItems(
-            [.init(name: "Tien"),
-             .init(name: "Greg"),
-             .init(name: "Anna"),
-             .init(name: "CJ"),
+            [.init(name: "shane.s.gats"),
+             .init(name: "shimada"),
+             .init(name: "Herbie")
         ], toSection: .friends)
         
         source.apply(snapshot)
@@ -144,11 +141,11 @@ class DiffableTableViewController: UITableViewController {
         case 0:
             label.text = "You"
         case 1:
-            label.text = "Family"
+            label.text = "Recents"
         case 2:
             label.text = "Close Friends"
         case 3:
-            label.text = "Friends"
+            label.text = "Recents"
         default:
             label.text = "N/A"
         }
@@ -162,10 +159,69 @@ class DiffableTableViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Contacts"
+        navigationItem.title = "IG DM's"
         navigationController?.navigationBar.prefersLargeTitles = true
         
+        navigationItem.rightBarButtonItem = .init(title: "New Message", style: .plain, target: self, action: #selector(handleAddContactTap))
+        
         setupSource()
+    }
+    
+    @objc private func handleAddContactTap() {
+        
+        let formView = ContactFormView(didAddContact: { (name, sectionType) in
+            self.dismiss(animated: true)
+            
+            var snapshot = self.source.snapshot()
+            snapshot.appendItems([.init(name: name)], toSection: sectionType)
+            self.source.apply(snapshot)
+        })
+        
+        let hostingController = UIHostingController(rootView: formView)
+        present(hostingController, animated: true)
+    }
+}
+
+struct ContactFormView: View {
+    
+    var didAddContact: (String, SectionType) -> () = { _, _ in }
+    
+    @State var name: String = ""
+    @State private var sectionType = SectionType.friends
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            TextField("Name", text: $name)
+            
+            Picker(selection: $sectionType, label: Text("Doesnt matter")) {
+                Text("Recents").tag(SectionType.family)
+                Text("Close Friends").tag(SectionType.closeFriends)
+                Text("Friends").tag(SectionType.friends)
+            }.pickerStyle(SegmentedPickerStyle())
+            
+            Button(action: {
+                self.didAddContact(self.name, self.sectionType)
+            }, label: {
+                HStack {
+                    Spacer()
+                    Text("Add").foregroundColor(.white)
+                    Spacer()
+                }.padding().background(Color.green)
+                .cornerRadius(10)
+            })
+            
+            Button(action: {
+                
+            }, label: {
+                HStack {
+                    Spacer()
+                    Text("Cancel").foregroundColor(.white)
+                    Spacer()
+                }.padding().background(Color.red)
+                .cornerRadius(10)
+            })
+        Spacer()
+    }.padding()
     }
 }
 
