@@ -9,32 +9,37 @@ enum SectionType {
     case yourself, family, closeFriends, friends
 }
 
-struct Contact: Hashable {
+class Contact: NSObject {
     let name: String
     var isFavorite = false
+    
+    init(name: String) {
+        self.name = name
+    }
 }
 
-class ContactViewModel: ObservableObject { // whenever the view model changes, line 24 block will update itself
+class ContactViewModel: ObservableObject {
     @Published var name = ""
     @Published var isFavorite = false
 }
 
-struct ContactRowView: View { // here we can create the cell where we can add UIImage etc
+struct ContactRowView: View {
     
     @ObservedObject var viewModel: ContactViewModel
     
     var body: some View {
         
-        HStack {
+        HStack (spacing: 16) {
             Image(systemName: "person.fill")
+                .font(.system(size: 34))
             Text(viewModel.name)
             Spacer()
-            Image(systemName: "star")
+            Image(systemName: viewModel.isFavorite ? "star.fill" : "star")
+                .font(.system(size: 24))
         }.padding(20)
     }
 }
 
-// Creating a custom Cell
 class ContactCell: UITableViewCell {
     
     let viewModel = ContactViewModel()
@@ -56,13 +61,49 @@ class ContactCell: UITableViewCell {
     }
 }
 
+class ContactsSource: UITableViewDiffableDataSource<SectionType, Contact> {
+    // subclass Diffable data source in order to do the swipe action
+    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+        return true
+    }
+}
+
 class DiffableTableViewController: UITableViewController {
     
-    lazy var source: UITableViewDiffableDataSource<SectionType, Contact> = .init(tableView: self.tableView) { (_, indexPath, contact) -> UITableViewCell? in
+    lazy var source: ContactsSource = .init(tableView: self.tableView) { (_, indexPath, contact) -> UITableViewCell? in
         
         let cell = ContactCell(style: .default, reuseIdentifier: nil)
         cell.viewModel.name = contact.name
+        cell.viewModel.isFavorite = contact.isFavorite
         return cell
+    }
+    
+    override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        
+        
+        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { (action, view, completion) in
+            completion(true)
+            
+            var snapshot = self.source.snapshot()
+            // figure out the contact we need to delete
+            guard let contact = self.source.itemIdentifier(for: indexPath) else { return }
+            snapshot.deleteItems([contact])
+            self.source.apply(snapshot)
+        }
+        
+        let favoriteAction = UIContextualAction(style: .normal, title: "Favorite") { (_, _, completion) in
+            completion(true)
+            
+            // super tricky part... how to reload a cell inside a diffable data source...
+            var snapshot = self.source.snapshot()
+            guard let contact = self.source.itemIdentifier(for: indexPath) else { return }
+            contact.isFavorite.toggle()
+            snapshot.reloadItems([contact])
+            self.source.apply(snapshot)
+            
+        }
+        
+        return .init(actions: [deleteAction, favoriteAction])
     }
     
     private func setupSource() {
@@ -101,7 +142,7 @@ class DiffableTableViewController: UITableViewController {
         
         switch section {
         case 0:
-            label.text = "Yourself"
+            label.text = "You"
         case 1:
             label.text = "Family"
         case 2:
@@ -119,8 +160,6 @@ class DiffableTableViewController: UITableViewController {
         return 50
     }
     
-
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationItem.title = "Contacts"
@@ -128,7 +167,6 @@ class DiffableTableViewController: UITableViewController {
         
         setupSource()
     }
-    
 }
 
 struct DiffiableContainer: UIViewControllerRepresentable {
@@ -138,7 +176,6 @@ struct DiffiableContainer: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        
     }
     
     typealias UIViewControllerType = UIViewController
@@ -152,6 +189,6 @@ struct ContentView_Previews: PreviewProvider {
 
 struct ContentView: View {
     var body: some View {
-        Text("Yo")
+        Text("")
     }
 }
